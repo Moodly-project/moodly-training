@@ -24,6 +24,7 @@ After cloning the repository with `git clone https://github.com/Moodly-project/m
    ```bash
    npm start
    ```
+4. Change .env file with your data
 
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,

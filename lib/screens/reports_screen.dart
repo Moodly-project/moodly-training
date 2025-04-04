@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:moodly/models/mood_entry.dart';
 import 'package:moodly/services/api_service.dart';
+import 'package:moodly/services/ai_service.dart'; // Importar o serviço de IA
 import 'dart:convert';
 import 'dart:math'; // For max calculation
 
 enum ReportPeriod { week, month, allTime }
+enum ReportTab { charts, ai } // Novo enum para as abas
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -19,6 +21,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   ReportPeriod _selectedPeriod = ReportPeriod.week; // Default period
+  ReportTab _selectedTab = ReportTab.charts; // Aba padrão
+  Map<String, dynamic>? _aiInsights; // Armazenar resultados da IA
+  bool _loadingAI = false; // Estado de carregamento da IA
 
   // Define mood colors globally in the state for reuse
   final Map<String, Color> _moodColors = {
@@ -76,6 +81,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
              _allEntries = entries;
              _isLoading = false;
            });
+           
+           // Se estivermos na aba de IA, carregue os insights
+           if (_selectedTab == ReportTab.ai) {
+             _loadAIInsights();
+           }
          } else {
             throw Exception(responseData['message'] ?? 'API Error');
          }
@@ -95,6 +105,57 @@ class _ReportsScreenState extends State<ReportsScreen> {
         setState(() {
           _errorMessage = 'Erro ao buscar dados.';
           _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Método para carregar insights da IA
+  Future<void> _loadAIInsights() async {
+    if (_allEntries.isEmpty) return;
+    
+    setState(() {
+      _loadingAI = true;
+    });
+    
+    try {
+      // Obter dados filtrados pelo período
+      final filteredEntries = _getFilteredEntries();
+      
+      // Obter o período para o texto adequado
+      String periodText = '';
+      switch (_selectedPeriod) {
+        case ReportPeriod.week:
+          periodText = 'semana';
+          break;
+        case ReportPeriod.month:
+          periodText = 'mês';
+          break;
+        case ReportPeriod.allTime:
+          periodText = 'período';
+          break;
+      }
+      
+      // Chamar o serviço de IA
+      final insights = await AIService.getAIPoweredInsights(filteredEntries);
+      
+      if (!mounted) return;
+      
+      setState(() {
+        _aiInsights = insights;
+        _loadingAI = false;
+      });
+    } catch (error) {
+      print("AI Insights Error: $error");
+      if (mounted) {
+        setState(() {
+          _loadingAI = false;
+          _aiInsights = {
+            'summary': 'Erro ao processar insights',
+            'message': 'Ocorreu um erro ao gerar os insights de IA.',
+            'tips': ['Tente novamente mais tarde.'],
+            'hasEnoughData': false
+          };
         });
       }
     }
@@ -146,10 +207,343 @@ class _ReportsScreenState extends State<ReportsScreen> {
       appBar: AppBar(
         title: Text('Relatórios - ${_getPeriodTitle()}'),
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          // Tabs de navegação
+          Card(
+            margin: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _selectedTab = ReportTab.charts;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _selectedTab == ReportTab.charts 
+                              ? Colors.deepPurple 
+                              : Colors.transparent,
+                            width: 3,
+                          ),
+                        ),
+                      ),
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.bar_chart, 
+                              color: _selectedTab == ReportTab.charts 
+                                ? Colors.deepPurple 
+                                : Colors.grey,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Gráficos',
+                              style: TextStyle(
+                                color: _selectedTab == ReportTab.charts 
+                                  ? Colors.deepPurple 
+                                  : Colors.grey,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _selectedTab = ReportTab.ai;
+                        // Carregue os insights se ainda não estiverem carregados
+                        if (_aiInsights == null && !_loadingAI) {
+                          _loadAIInsights();
+                        }
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: _selectedTab == ReportTab.ai 
+                              ? Colors.deepPurple 
+                              : Colors.transparent,
+                            width: 3,
+                          ),
+                        ),
+                      ),
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.psychology, 
+                              color: _selectedTab == ReportTab.ai 
+                                ? Colors.deepPurple 
+                                : Colors.grey,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Assistente IA',
+                              style: TextStyle(
+                                color: _selectedTab == ReportTab.ai 
+                                  ? Colors.deepPurple 
+                                  : Colors.grey,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Conteúdo da aba selecionada
+          Expanded(
+            child: _selectedTab == ReportTab.charts 
+              ? _buildChartsTab() 
+              : _buildAITab(),
+          ),
+        ],
+      ),
     );
   }
 
+  // Widget para a aba de gráficos
+  Widget _buildChartsTab() {
+    return _buildBody();
+  }
+  
+  // Widget para a aba do Assistente de IA
+  Widget _buildAITab() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, color: Colors.red[300], size: 60),
+              const SizedBox(height: 16),
+              Text(_errorMessage!, textAlign: TextAlign.center),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.refresh),
+                label: const Text('Tentar Novamente'),
+                onPressed: _loadData,
+              )
+            ],
+          ),
+        ),
+      );
+    }
+    
+    if (_allEntries.isEmpty) {
+      return const Center(child: Text('Sem dados para gerar insights de IA.'));
+    }
+    
+    if (_loadingAI) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
+            Text(
+              'Analisando seus padrões de humor...',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ],
+        ),
+      );
+    }
+    
+    // Se ainda não temos insights, carregue-os
+    if (_aiInsights == null) {
+      _loadAIInsights();
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    // Exibir os insights da IA
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.white, Colors.grey.shade100],
+        ),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildPeriodSelector(),
+            const SizedBox(height: 16),
+            
+            // Card principal com o resumo da IA
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.psychology,
+                          color: Colors.deepPurple,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _aiInsights!['summary'],
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.deepPurple,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 24),
+                    if (!_aiInsights!['hasEnoughData'])
+                      const Icon(Icons.info_outline, color: Colors.amber, size: 40),
+                    const SizedBox(height: 8),
+                    Text(
+                      _aiInsights!['message'],
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        height: 1.5,
+                      ),
+                    ),
+                    if (_aiInsights!['hasEnoughData'] && _aiInsights!['dominant_mood'] != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16.0),
+                        child: _buildMoodChip(_aiInsights!['dominant_mood']),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Card de dicas da IA
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Dicas Personalizadas',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.deepPurple,
+                      ),
+                    ),
+                    const Divider(height: 24),
+                    ..._aiInsights!['tips'].map<Widget>((tip) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.tips_and_updates, color: Colors.amber, size: 24),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                tip,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Disclaimer de IA
+            Padding(
+              padding: const EdgeInsets.only(top: 24.0, bottom: 12.0),
+              child: Text(
+                'As análises são baseadas apenas nos dados que você registrou. Para insights mais precisos, registre seu humor regularmente.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  // Widget para exibir um chip de humor
+  Widget _buildMoodChip(String mood) {
+    final color = _getMoodColor(mood);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            mood == 'Feliz' ? Icons.sentiment_very_satisfied :
+            mood == 'Triste' ? Icons.sentiment_very_dissatisfied :
+            mood == 'Ansioso' ? Icons.sentiment_dissatisfied :
+            mood == 'Com Raiva' ? Icons.sentiment_very_dissatisfied :
+            mood == 'Animado' ? Icons.sentiment_satisfied_alt :
+            Icons.sentiment_neutral,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            mood,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
