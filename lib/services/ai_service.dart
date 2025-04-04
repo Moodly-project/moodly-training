@@ -129,13 +129,52 @@ class AIService {
   }
   
   // Simulação de chamada a uma API de IA externa (para uso futuro)
-  static Future<Map<String, dynamic>> getAIPoweredInsights(List<MoodEntry> entries) async {
-    // Esta função pode ser expandida para integrar com APIs como OpenAI ou Google AI
-    // Por enquanto, usamos nossa própria lógica
+  static Future<Map<String, dynamic>> getAIPoweredInsights(List<MoodEntry> entries, {String period = 'semana'}) async {
+    // Configuração da API externa
+    const String apiKey = "batata"; // Chave da API externa
+    const bool useExternalAPI = true; // Defina como true para usar a API externa
     
-    // Simular tempo de processamento da IA
-    await Future.delayed(const Duration(milliseconds: 800));
+    if (useExternalAPI) {
+      try {
+        // Preparar dados para enviar à API
+        final Map<String, dynamic> requestData = {
+          'api_key': apiKey,
+          'mood_data': entries.map((entry) => {
+            'mood': entry.mood,
+            'date': entry.date.toIso8601String(),
+            'note': entry.notes,
+          }).toList(),
+          'period': period,
+        };
+        
+        // Simular chamada de API - substitua isso pela sua implementação de chamada HTTP real
+        // Exemplo com http:
+        // final response = await http.post(
+        //   Uri.parse('https://sua-api-ia.com/insights'),
+        //   headers: {'Content-Type': 'application/json'},
+        //   body: json.encode(requestData),
+        // );
+        
+        print("Usando API externa com chave: $apiKey");
+        await Future.delayed(const Duration(seconds: 1)); // Simular tempo de resposta
+        
+        // Processar resposta - substitua pelo código real para processar a resposta da sua API
+        // if (response.statusCode == 200) {
+        //   final responseData = json.decode(response.body);
+        //   return responseData;
+        // }
+        
+        // Como estamos simulando, usamos a implementação local como fallback
+        return generateInsights(entries, period: period);
+      } catch (e) {
+        print("Erro ao chamar API externa: $e");
+        // Em caso de erro, usar a implementação local
+        return generateInsights(entries, period: period);
+      }
+    }
     
-    return generateInsights(entries);
+    // Se não estiver usando API externa, usar implementação local
+    await Future.delayed(const Duration(milliseconds: 800)); // Simular tempo de processamento
+    return generateInsights(entries, period: period);
   }
 } 

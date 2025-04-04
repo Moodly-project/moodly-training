@@ -137,7 +137,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       }
       
       // Chamar o serviço de IA
-      final insights = await AIService.getAIPoweredInsights(filteredEntries);
+      final insights = await AIService.getAIPoweredInsights(filteredEntries, period: periodText);
       
       if (!mounted) return;
       
