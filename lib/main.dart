@@ -4,7 +4,6 @@ import 'package:moodly/screens/splash_screen.dart';
 // MoodEntry model might still be needed if passed around
 // import 'package:moodly/models/mood_entry.dart'; 
 // import 'package:moodly/screens/add_mood_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Keep for logout
 import 'package:intl/intl.dart';
 import 'package:moodly/screens/login_screen.dart'; // Keep for logout
 import 'package:intl/date_symbol_data_local.dart'; // Import for locale data

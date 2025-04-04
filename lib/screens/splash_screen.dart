@@ -40,6 +40,9 @@ class _SplashScreenState extends State<SplashScreen> {
       );
     } else {
       print("No token -> Login");
+      // Limpa todos os dados armazenados se não houver login ativo
+      await prefs.clear();
+      print("Dados locais limpos devido à ausência de login");
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
       );

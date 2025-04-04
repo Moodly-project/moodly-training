@@ -15,6 +15,12 @@ exports.register = async (req, res, next) => {
     if (password.length < 6) {
          return res.status(400).json({ success: false, message: 'Senha >= 6 chars' });
     }
+    
+    // Validação de email usando regex
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ success: false, message: 'Email inválido' });
+    }
 
     try {
         const [existingUsers] = await pool.query('SELECT email FROM users WHERE email = ?', [email]);

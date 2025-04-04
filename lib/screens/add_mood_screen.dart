@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Import shared_preferences
 import '../models/mood_entry.dart'; // Assuming model is in models folder
 import 'package:moodly/services/api_service.dart'; // Use ApiService
 import 'package:intl/intl.dart'; // For date formatting

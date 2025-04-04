@@ -110,8 +110,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty || !value.contains('@')) {
-                      return 'Email inválido';
+                    if (value == null || value.isEmpty) {
+                      return 'Email é obrigatório';
+                    }
+                    // Regex para validação de email
+                    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                    if (!emailRegex.hasMatch(value)) {
+                      return 'Insira um email válido';
                     }
                     return null;
                   },

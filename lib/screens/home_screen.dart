@@ -168,8 +168,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
-    print("Token removed, logging out.");
+    // Limpar todas as SharedPreferences para evitar dados persistentes
+    await prefs.clear();
+    print("Todas as preferências foram limpas, logout concluído.");
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()), 
